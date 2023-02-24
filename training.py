@@ -1,17 +1,17 @@
 #%% Libraries
 import numpy as np
 import matplotlib.pyplot as plt
-import glob, os
+import os
+import datetime
 
 import cv2
 import tensorflow as tf
 from tensorflow import keras
-from keras import layers, losses, optimizers, callbacks
+from keras import layers, losses, callbacks
 from tensorflow_examples.models.pix2pix import pix2pix
 
 from sklearn.model_selection import train_test_split
 from IPython.display import clear_output
-from scipy import io
 
 #%%
 print(os.getcwd())
@@ -155,8 +155,7 @@ train_batches = (
 # The test dataset is also batched into batches of 16 using the batch method.
 test_batches = test_dataset.batch(BATCH_SIZE)
 
-#%%
-# Visualize some examples
+#%% 3.0 Visualize some examples
 def display(display_list):
     plt.figure(figsize=(15, 15))
     title = ["Input Image", "True Mask", "Predicted Mask"]
@@ -180,7 +179,7 @@ for images, masks in train_batches.take(2):
     sample_image, sample_mask = images[0], masks[0]
     display([sample_image, sample_mask])
 
-# %% Create image segmentation model
+# %% 4.0 Create image segmentation model
 """
 Use a pre-trained MobileNetV2 model as the feature extraction layers: 
 The MobileNetV2 model is a pre-trained convolutional neural network 
@@ -351,7 +350,16 @@ class DisplayCallback(callbacks.Callback):
         print("\nSample Prediction after epoch {}\n".format(epoch + 1))
 
 
-# %% Model Training
+#%% TensorBoard callbacks and model fitting
+
+base_log_path = r"tensorboard_logs"
+log_path = os.path.join(
+    base_log_path, datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+)
+# Define the callbacks
+display_callback = DisplayCallback()
+tensorboard_callback = callbacks.TensorBoard(log_path)
+# %% 5.0  Model Training
 # Hyperparameters for model
 EPOCHS = 10
 VAL_SUBSPLITS = 5
@@ -363,10 +371,49 @@ history = model.fit(
     epochs=EPOCHS,
     steps_per_epoch=STEPS_PER_EPOCH,
     validation_steps=VALIDATION_STEPS,
-    callbacks=[DisplayCallback()],
+    callbacks=[display_callback, tensorboard_callback],
 )
 
-# %% Deploy model
+# %% 6.0 Model Deployment
 show_predictions(test_batches, 3)
 # %% Saving the model
 model.save("saved_models/.model.h5")
+
+#%% 7.0 Testing the model with test datasets
+test_images = []
+test_masks = []
+
+# Load the test images using opencv
+test_image_dir = os.path.join(
+    os.getcwd(), "datasets", "data-science-bowl-2018-2", "test", "inputs"
+)
+for test_image_file in os.listdir(test_image_dir):
+    test_img = cv2.imread(os.path.join(test_image_dir, test_image_file))
+    test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
+    test_img = cv2.resize(test_img, (128, 128))
+    test_images.append(test_img)
+
+# Load the test masks
+test_mask_dir = os.path.join(
+    os.getcwd(), "datasets", "data-science-bowl-2018-2", "test", "masks"
+)
+for test_mask_file in os.listdir(test_mask_dir):
+    test_mask = cv2.imread(
+        os.path.join(test_mask_dir, test_mask_file), cv2.IMREAD_GRAYSCALE
+    )
+    test_mask = cv2.resize(test_mask, (128, 128))
+    test_mask = np.expand_dims(test_mask, axis=-1)
+    test_masks.append(test_mask)
+
+# Convert the list of test images and masks into numpy arrays
+test_images_np = np.array(test_images)
+test_masks_np = np.array(test_masks)
+
+# Normalize the pixel values of test images
+test_images_np = test_images_np / 255.0
+
+# Use the show_predictions method to visualize the predicted masks
+show_predictions(
+    tf.data.Dataset.from_tensor_slices((test_images_np, test_masks_np)).batch(1),
+    num=10,
+)
