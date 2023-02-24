@@ -115,6 +115,12 @@ The training history is stored in the history object, which can be used to plot 
   <em>Training vs Validation Loss</em>
 </p>
 
+<p align="center">
+  <img src="pictures\last_epoch_results.png" alt="Results">
+  <br>
+  <em>Results</em>
+</p>
+
 ## 7. Testing the U-Net Model with Test Data
 
 The code in this section loads test images and masks using OpenCV and resizes them to 128x128 pixels. It then converts them to NumPy arrays, normalizes the pixel values of the test images, and uses the show_predictions function to visualize the predicted masks for the test images. The show_predictions function displays the input image, true mask, and predicted mask for a specified number of examples.

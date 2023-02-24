@@ -374,6 +374,16 @@ history = model.fit(
     callbacks=[display_callback, tensorboard_callback],
 )
 
+#%% Model Evaluation
+train_acc = history.history["accuracy"][-1]
+val_acc = history.history["val_accuracy"][-1]
+train_loss = history.history["loss"][-1]
+val_loss = history.history["val_loss"][-1]
+
+print(
+    f"Last Epoch Results:\nTrain Accuracy: {train_acc:.4f}\nValidation Accuracy: {val_acc:.4f}\nTrain Loss: {train_loss:.4f}\nValidation Loss: {val_loss:.4f}"
+)
+
 # %% 6.0 Model Deployment
 show_predictions(test_batches, 3)
 # %% Saving the model
